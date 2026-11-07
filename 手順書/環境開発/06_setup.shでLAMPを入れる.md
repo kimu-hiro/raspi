@@ -306,113 +306,230 @@ sudo rm /var/www/html/hello.php
 
 ---
 
-## 3. 打ったコマンドを setup.sh にまとめる
+## 3. setup.sh を少しずつ組み立てる
 
-### 3-1. 2 で打ったものと、setup.sh の対応
+そもそも：`setup.sh` は「実行すると、2 でやったことが
+全部もう一度おきる"レシピ"」です（記録ではなく、動く台本）。
+ここでは完成形を一気に書きません。
+**一番小さい形を動かして、1つずつ足します**。
 
-`setup.sh` の中身は、**2 で打ったコマンドとほぼ同じ**です。
-それぞれを「関数」という名前付きの箱に入れて、`main` が順番に呼びます。
+進め方のクセ（大事）：
+- まず `echo`（文字を出すだけ）で「形」を練習する
+  → Mac ですぐ動かせる
+- 形に慣れたら、中身を本物のコマンド（apt-get など）に替える
+- 本物の入れかえは、ラズパイで動かす（Mac に apt-get は無い）
 
-| 2 で打ったもの | `setup.sh` の関数 |
-|---|---|
-| 2-1 `sudo apt update` | `update_package_list` |
-| 2-2 `sudo apt install apache2` | `install_apache` |
-| 2-3 `sudo apt install php ...` | `install_php` |
-| 2-4 `sudo apt install mariadb-server` | `install_mariadb` |
-| 2-5 `read -r -s -p ...` | `ask_db_password` |
-| 2-5 `CREATE DATABASE ...` | `create_database` |
-| 2-5 `CREATE USER ...`・`GRANT ... ON *.*`（🕳️ 穴） | `create_db_user` |
-| 2-6 `tee info.php`（🕳️ phpinfo の穴） | `create_info_page` |
-
-確かめ（PHP が動くか試す `hello.php`）は、レシピには入れません。一度確かめれば十分だからです。
-ただし `info.php`（phpinfo の穴）は「確かめ」ではなく**わざとの穴**なので、`setup.sh` に入れます。作り直しても同じ遊び台が建つように、です。
-（方針：`setup.sh` は実物と一致させる。穴を塞ぐときは `setup.sh` も一緒に直す＝それ自体が塞ぐ練習）
-
-### 3-2. 手で打つときとの違い
-
-| 違い | 手で打つとき | `setup.sh` |
-|---|---|---|
-| `apt` と `apt-get` | `apt` | `apt-get`（スクリプトでは、表示が変わりにくい `apt-get` を使うのが決まり） |
-| 「続けますか？」 | 自分で `y` | `-y` を付けて、自動で「はい」 |
-| 途中で失敗したら | 自分で気づいて止まる | `set -euo pipefail` で自動で止まる |
-
-### 3-3. どこに置く？
-
-Mac のプロジェクトの中に置きます。
-
-```
- ~/development/raspi/
-  ├ 手順書/
-  └ setup.sh   ← ここに作る
-```
-
-| なぜ Mac に置くの？ | |
-|---|---|
-| 手順書と同じ場所 | 探しやすい |
-| あとで Git で管理できる | 変えた歴史が残る |
-| ラズパイが壊れても残る | microSD を書き直しても、Mac から送り直せる |
-
-### 3-4. 書く
-
-**Mac のターミナル**で打つと、VS Code で空のファイルが開きます。
+練習用のファイルを1つ作ります（本番とは別。あとで消す）。
 
 ```bash
-code ~/development/raspi/setup.sh
+code ~/development/raspi/practice.sh
 ```
 
-下の中身を書いて、保存（`⌘ + S`）します。
-コピーしてもいいですが、**一度は全部読んで**、3-1 の表と見比べてください。
+### 3-1. まず「1行だけ」動かす
+
+中身をこれだけ書いて保存：
 
 ```bash
 #!/bin/bash
-# 家計簿サーバーの土台（Apache・PHP・MariaDB）を入れる。
-# 壊れても作り直せるように、何度実行しても
-# 同じ結果になるように書いている。
+echo "こんにちは"
+```
 
-set -euo pipefail
+- `#!/bin/bash`（シェバン）＝このファイルは bash で動かす、の印
+- `echo "..."`＝文字を画面に出す
 
-readonly DB_NAME="vuln_kakeibo"
-readonly DB_USER="vuln_kakeibo_app"
+Mac のターミナルで動かす：
+
+```bash
+bash ~/development/raspi/practice.sh
+```
+
+→ `こんにちは` と出れば成功。これが「.sh を動かす」最小形です。
+
+### 3-2. その1行を「関数（箱）」に入れる
+
+関数＝名前をつけた箱。中のコマンドをまとめて、名前で呼べます。
+
+書きかえて保存：
+
+```bash
+#!/bin/bash
+
+say_hello() {
+  echo "こんにちは"
+}
+
+say_hello
+```
+
+形の見方：
+
+```
+say_hello()   箱の名前 ＋ ()
+{             中身のはじまり
+  echo ...    やること
+}             中身のおわり
+
+say_hello     箱を呼ぶ（名前だけ）
+```
+
+- `()` は中身が空でも必ず付ける
+- 一番下の `say_hello` を書かないと、箱を作っただけで
+  誰も呼ばない＝何も起きない
+
+動かす：`bash ~/development/raspi/practice.sh`
+→ さっきと同じ `こんにちは`。
+**箱に入れても結果は同じ**。これが関数の正体です。
+
+### 3-3. 箱を2つにして、main（まとめ役）に呼ばせる
+
+箱が増えたら、「どの順で呼ぶか」をまとめる箱＝`main` を作る。
+
+```bash
+#!/bin/bash
+
+say_hello() {
+  echo "こんにちは"
+}
+
+say_bye() {
+  echo "さようなら"
+}
+
+main() {
+  say_hello
+  say_bye
+}
+
+main
+```
+
+- `main`＝指揮者。どの箱を・どの順で呼ぶかを書くだけ
+- 一番下は `main` を1回呼べばいい（main の中が順に動く）
+
+動かす → `こんにちは` → `さようなら`。
+**これで setup.sh の骨組み（関数 ＋ main）が手に入りました。**
+ここまで Mac だけで練習できます。
+
+### 3-4. 中身を本物にする（同じ形のくり返し）
+
+骨組みは同じで、箱の中の `echo` を、2 で打った本物の
+コマンドに入れかえるだけ。
+ここからは本物の `~/development/raspi/setup.sh` に書きます。
+
+まず1つめ。2-1（`sudo apt update`）を箱にして、main から呼ぶ：
+
+```bash
+#!/bin/bash
 
 update_package_list() {
   sudo apt-get update
 }
 
+main() {
+  update_package_list
+}
+
+main
+```
+
+- 手で打つときは `apt`、スクリプトでは `apt-get`
+  （表示が変わりにくく、台本向き）
+
+2つめ。`install_apache` を足して、main からも呼ぶ：
+
+```bash
 install_apache() {
   sudo apt-get install -y apache2
 }
+```
 
-install_php() {
-  sudo apt-get install -y \
-    php libapache2-mod-php php-mysql php-mbstring
+main に1行足す：
+
+```bash
+main() {
+  update_package_list
+  install_apache
 }
+```
 
-install_mariadb() {
-  sudo apt-get install -y mariadb-server
-}
+- `-y`（yes）＝「続けますか?」に自動で「はい」。
+  台本は人が見ていないので
 
+**あとは同じ形のくり返し**。箱を足して main に1行足す：
+
+| 足す箱 | 中のコマンド |
+|---|---|
+| `install_php` | `sudo apt-get install -y php libapache2-mod-php php-mysql php-mbstring` |
+| `install_mariadb` | `sudo apt-get install -y mariadb-server` |
+
+- php の行は長いので `\`（行の続き）で2行に分けてよい
+
+### 3-5. 安全装置と、名前の箱を足す
+
+ファイルの上の方（シェバンの下）に2つ足す。
+
+```bash
+set -euo pipefail
+
+readonly DB_NAME="vuln_kakeibo"
+readonly DB_USER="vuln_kakeibo_app"
+```
+
+`set -euo pipefail`＝失敗したら勝手に止まる安全装置：
+
+| 文字 | 意味 |
+|---|---|
+| `-e` | コマンドが失敗したら、そこで止まる |
+| `-u` | 書いてない変数を使ったら止まる（打ち間違い対策） |
+| `-o pipefail` | `\|` の途中が失敗しても止まる |
+
+`readonly`＝あとで書きかえない箱。
+棚の名前・係の名前を1か所に決めておくと、下で
+`${DB_NAME}` と呼び出せる（名前を1か所で管理）。
+
+### 3-6. 新しい形の箱を5つ（ここだけ少し新しい）
+
+2-5・2-6 で新しく出た形なので、1つずつ。
+
+(1) パスワードを聞く箱：
+
+```bash
 ask_db_password() {
   local db_password
   read -r -s -p "DB password for ${DB_USER}: " db_password
-  # 改行しないと、次の表示が同じ行にくっつくため
   echo >&2
   echo "$db_password"
 }
+```
 
+- `local`＝この箱の中だけで使う変数（外に漏らさない）
+- `read ... db_password`＝打った文字を `db_password` の箱に入れる。
+  **`read` の後ろの言葉は"箱の名前"**。パスワードそのものではない
+- `-r`＝`\` を特別扱いしない、`-s`＝画面に出さない、
+  `-p "..."`＝聞くときの文
+- `echo >&2`＝改行を1つ出す（`-s` で消えた改行の代わり）
+- `echo "$db_password"`＝箱の中身を"外に渡す"（下の main が受け取る）
+
+(2) 棚を作る箱（`<<SQL` が新しい）：
+
+```bash
 create_database() {
   sudo mariadb <<SQL
 CREATE DATABASE IF NOT EXISTS ${DB_NAME}
   CHARACTER SET utf8mb4;
 SQL
 }
+```
 
+- `<<SQL` 〜 `SQL`＝この間の行を、まとめて倉庫番（mariadb）に
+  渡す（手紙）。手順書 03 の EOF と同じ仕組み
+- 閉じの `SQL` は**行の左はしに**書く（前に空白を入れない）
+
+(3) 係の人を作る箱（手紙＋受け取ったパスワード）：
+
+```bash
 create_db_user() {
   local db_password="$1"
-  # コマンドの引数に書くと、ほかの人から
-  # 一瞬見えることがあるので、<<SQL で渡す
-  # 🕳️ わざと穴：ON *.* で、家計簿以外の棚（mysql など）も全部さわれる
-  #    塞ぐときは ON ${DB_NAME}.* に戻し、使う4つ
-  #    （SELECT, INSERT, UPDATE, DELETE）だけにする
   sudo mariadb <<SQL
 CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost'
   IDENTIFIED BY '${db_password}';
@@ -420,19 +537,39 @@ GRANT ALL PRIVILEGES ON *.*
   TO '${DB_USER}'@'localhost';
 SQL
 }
+```
 
-# 🕳️ わざと穴：phpinfo() のページを置く（PHP の設定が丸見え）
-#    塞ぐときは sudo rm /var/www/html/info.php
+- `local db_password="$1"`＝main から渡された1つめの値を受け取る
+- 🕳️ わざと穴：`ON *.*`（家計簿以外の棚も全部さわれる）。
+  塞ぐときは `ON ${DB_NAME}.*` に戻し、使う4つだけにする
+
+(4) phpinfo の穴を置く箱：
+
+```bash
 create_info_page() {
   echo '<?php phpinfo();' | sudo tee /var/www/html/info.php
 }
+```
 
+- 🕳️ わざと穴：PHP の設定が丸見え。
+  塞ぐときは `sudo rm /var/www/html/info.php`
+
+(5) 最後に版を表示する箱（確認）：
+
+```bash
 show_versions() {
   apache2 -v | head -n 1
   php -v | head -n 1
   mariadb --version
 }
+```
 
+### 3-7. main に全部つなぐ
+
+指揮者の main に、呼ぶ順を書く。
+パスワードだけ「受け取って次に渡す」のが少し特別。
+
+```bash
 main() {
   update_package_list
   install_apache
@@ -452,79 +589,33 @@ main() {
 main
 ```
 
-### 3-5. 各部分の意味
+- `db_password=$(ask_db_password)`＝箱が"外に渡した"文字を
+  受け取る（`$( )`＝中のコマンドの結果を取り込む）
+- `create_db_user "$db_password"`＝その合言葉を、係を作る箱に
+  渡す（箱の中で `$1` になる）
 
-**最初の部分**
+### 3-8. ラズパイで1回だけ動かす
 
-| 部分 | 意味 |
-|---|---|
-| `#!/bin/bash` | 「このファイルは bash で動かしてね」という印 |
-| `set -euo pipefail` | 安全装置（下の表） |
-| `readonly DB_NAME="vuln_kakeibo"` | 棚の名前。`readonly` は「あとで書きかえない」という印 |
-| `readonly DB_USER="vuln_kakeibo_app"` | 係の人の名前 |
-
-**安全装置 `set -euo pipefail`**
-
-| 文字 | 意味 | たとえ |
-|---|---|---|
-| `-e` | 途中でエラーが出たら、そこで止まる | 1段目で失敗したら、2段目を積まない |
-| `-u` | 書いていない変数を使ったら止まる | 名前のつづり間違いに気づける |
-| `-o pipefail` | `\|` でつないだコマンドのどれかが失敗したら止まる | 途中の失敗を見逃さない |
-
-**合言葉を聞く関数 `ask_db_password`**
-
-| 部分 | 意味 |
-|---|---|
-| `local db_password` | この関数の中だけで使う箱 |
-| `read -r -s -p "..."` | 2-5 の1行目と同じ |
-| `echo >&2` | 改行だけを画面に出す（`>&2` は「結果ではなく、画面の表示用に出す」） |
-| `echo "$db_password"` | 受け取った合言葉を、呼んだ人（`main`）に返す |
-
-**`main` のこの2行**
-
-```bash
-local db_password
-db_password=$(ask_db_password)
-```
-
-| 部分 | 意味 |
-|---|---|
-| `$( ... )` | 中の関数を呼んで、返ってきた答えを受け取る |
-
-### 3-6. ラズパイに送る
-
-**Mac のターミナル**で打ちます。
+setup.sh はラズパイ用（Mac に apt-get は無い）。送って動かす。
 
 ```bash
 scp ~/development/raspi/setup.sh homepi:~/
 ```
 
-| 部分 | 意味 |
-|---|---|
-| `scp` | SSH の道を使って、ファイルを送る（secure copy） |
-| `homepi:~/` | 送り先。ラズパイの、自分の家（`/home/kimuhiro/`） |
+- `scp`（secure copy＝安全なコピー）＝SSH の鍵でファイルを送る。
+  `homepi:~/`＝ラズパイの自分の部屋に置く
 
-→ `setup.sh  100%` のように出れば OK（手順書 05 で鍵にしたので、パスワードは聞かれません）
-
-### 3-7. レシピが正しいか、試しに実行する
-
-**ラズパイの中**で打ちます。
+ラズパイで動かす：
 
 ```bash
+ssh homepi
 bash ~/setup.sh
 ```
 
-もう 2 で全部入れてあるので、**2回目の実行**になります。
-何度実行しても壊れないように書いてあるので、大丈夫です。
-
-| 2回目の実行で | どうなる？ |
-|---|---|
-| もう入っている道具 | `is already the newest version`（もう最新だよ）と言って、何もしない |
-| もうある棚 | `IF NOT EXISTS` なので、何もしない |
-| もういる係の人 | `IF NOT EXISTS` なので、何もしない（合言葉も変わらない） |
-
-- `DB password for vuln_kakeibo_app:` と聞かれたら、2-5 と同じ合言葉を打つ
-- 最後にこう出れば成功です（数字は少し違ってもいい）
+- `DB password for ...` と聞かれたら、2-5 と同じ合言葉を打つ
+- もう 2 で手作業で作ってあるので、多くは「もう最新」「もう在る」
+  と出る（それで正常。何度流しても同じ結果＝レシピの良さ）
+- 最後にこう出れば成功（数字は少し違ってもいい）：
 
 ```
 Server version: Apache/2.4.x (Debian)
@@ -533,8 +624,11 @@ mariadb from 11.x.x-MariaDB ...
 setup.sh: done
 ```
 
-これで、レシピが正しく書けていることが分かりました。
-ラズパイを作り直したときは、`bash ~/setup.sh` の1回で 2 の全部ができます。
+練習用の `practice.sh` は、もう消して OK：
+
+```bash
+rm ~/development/raspi/practice.sh
+```
 
 ---
 
