@@ -594,27 +594,61 @@ main
 - `create_db_user "$db_password"`＝その合言葉を、係を作る箱に
   渡す（箱の中で `$1` になる）
 
-### 3-8. ラズパイで1回だけ動かす
+### 3-8. ラズパイに送って、1回動かす
 
-setup.sh はラズパイ用（Mac に apt-get は無い）。送って動かす。
+大事な整理：**書くのは Mac、動かすのはラズパイ**。
+`setup.sh` の中の `apt-get` はラズパイ（Debian）の道具で、
+Mac には無い。だから Mac で書いたファイルを `scp` で
+ラズパイにコピーして、ラズパイ側で動かす。
+
+```
+Mac（~/development/raspi/setup.sh）
+   │ ここで書く・git で管理（本体）
+   │ scp でコピー
+   ▼
+ラズパイ（~/scripts/setup.sh）
+     ここで動かす
+```
+
+まずラズパイに置き場を作る：
 
 ```bash
-scp ~/development/raspi/setup.sh homepi:~/
+ssh homepi
+mkdir -p ~/scripts
+exit
+```
+
+- `mkdir -p ~/scripts`＝スクリプト置き場を作る
+  （`-p`＝parents＝無ければ作る。あってもエラーにしない）
+- `exit`＝ラズパイから出て、Mac に戻る
+- 置き場所のきまり：`/etc` は設定ファイル専用。実行する
+  スクリプトは `bin` 系か自分の部屋（`~/scripts` など）へ
+
+Mac から送る：
+
+```bash
+scp ~/development/raspi/setup.sh homepi:~/scripts/
 ```
 
 - `scp`（secure copy＝安全なコピー）＝SSH の鍵でファイルを送る。
-  `homepi:~/`＝ラズパイの自分の部屋に置く
+  `homepi:~/scripts/`＝ラズパイの `~/scripts` の中に置く
+  （`~` はラズパイの自分の部屋 `/home/kimuhiro`。一番上の `/`
+  ではない）
 
 ラズパイで動かす：
 
 ```bash
 ssh homepi
-bash ~/setup.sh
+bash ~/scripts/setup.sh
 ```
 
 - `DB password for ...` と聞かれたら、2-5 と同じ合言葉を打つ
 - もう 2 で手作業で作ってあるので、多くは「もう最新」「もう在る」
-  と出る（それで正常。何度流しても同じ結果＝レシピの良さ）
+  と出る（それで正常。何度流しても同じ結果＝レシピの良さ）。
+  **二重インストールにはならない**（`install` は入っていれば
+  足踏み、`IF NOT EXISTS` は在れば素通り）
+- つまり 3-8 は「入れ直し」ではなく、**流しても壊れないと
+  確かめるリハーサル**。それ自体がレシピが正しい証拠
 - 最後にこう出れば成功（数字は少し違ってもいい）：
 
 ```
@@ -660,8 +694,8 @@ rm ~/development/raspi/practice.sh
 | 2-3 で PHP の文字がそのまま出る | 連絡係（`libapache2-mod-php`）が働いていない | `sudo systemctl restart apache2` を打って、開き直す |
 | 2-5 で `ERROR 1064` | SQL の打ち間違い | 8行をもう一度コピーして貼る |
 | 2-5 の確かめで `Access denied` | 倉庫の合言葉の打ち間違い | **英数** キーを押してから、もう一度 |
-| 3-6 で `No such file or directory` | 3-4 で保存した場所がちがう | `ls ~/development/raspi/` で `setup.sh` があるか見る |
-| 3-7 で途中で止まった | `setup.sh` の書き間違い | 止まる前後の文字を Claude に貼る |
+| 3-8 で `No such file or directory` | 送り先・置き場所がちがう | ラズパイで `ls ~/scripts/` に `setup.sh` があるか見る |
+| 3-8 で途中で止まった | `setup.sh` の書き間違い | 止まる前後の文字を Claude に貼る |
 
 ---
 
