@@ -203,15 +203,20 @@ ls /var/www/html
 ### 2-2. DVWA を置く
 
 ```bash
-sudo cp -r ~/DVWA /var/www/html/dvwa
+sudo mv ~/DVWA /var/www/html/dvwa
 ```
 
 | 部分 | 意味 |
 |---|---|
-| `cp -r` | フォルダを丸ごとコピー（r は中身ごと） |
+| `sudo` | 管理者として実行。`/var/www/html` は管理者の場所なので要る |
+| `mv` | move＝動かす。フォルダを丸ごと移す（home からは無くなる） |
 | `/var/www/html/dvwa` | 置き先。ブラウザでは `/dvwa/` で開く |
 
 → これで `http://homepi/dvwa/` が DVWA になります
+
+- 練習で DVWA を壊したら、1-3 の `git clone` からやり直す
+  （home に原本を残す `cp -r` ではなく `mv` にした。
+  取り直すのも練習になるため。2026-11-11 に決めた）
 
 ---
 
