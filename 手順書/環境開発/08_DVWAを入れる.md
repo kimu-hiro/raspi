@@ -363,6 +363,35 @@ sudo cp config.inc.php.dist config.inc.php
 | `config.inc.php.dist` | 設定の見本ファイル |
 | `config.inc.php` | 本番の設定ファイル（これを DVWA が読む） |
 
+#### これは、どこに書いてあるのか
+
+本家の **README**（read me＝私を読んで。最初に読む説明書）です。
+GitHub のページでは、ファイル一覧の下にそのまま表示されます。
+
+```
+ README.md の見出し（一部）
+  Installation       入れ方
+  Configurations     設定
+   └ Config File     ← ここに書いてある
+  Database Setup     DB の用意
+  Folder Permissions フォルダの権限
+  Default Credentials 最初の名前と合言葉
+  Troubleshooting    困ったとき
+```
+
+> DVWA ships with a dummy copy of its config file
+> which you will need to copy into place
+>
+> DVWA には設定ファイルの見本が付いてきます。
+> それを、決まった場所にコピーする必要があります。
+
+- 取ってきたフォルダの中にも同じものがある。
+  ラズパイで `less /var/www/html/dvwa/README.md`
+  （`less`＝長い文を少しずつ見る道具。`q` で閉じる）
+- 日本語版の README は無い（2026-11-12 に確認。14の言語版がある）
+- `.dist`（distribution＝配る用）や `.example`・`.sample` が付いた
+  ファイルは、どのソフトでも「コピーして使う見本」の印
+
 ### 4-2. DB の合言葉を書く
 
 ```bash
