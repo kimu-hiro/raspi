@@ -513,6 +513,18 @@ Security Level: [ Low ▼ ]  → Submit
 
 ---
 
+## あとまわしにしたもの（2026-11-12 に決めた）
+
+| 何 | 要る準備 | いつやるか |
+|---|---|---|
+| API の練習 | `sudo a2enmod rewrite` と、Composer で部品をそろえる | ほかの練習に慣れて、やりたくなったとき |
+| 安全でない CAPTCHA の練習 | `php-gd` を入れる・reCAPTCHA の鍵を作る | やりたくなったとき |
+
+- どちらも、やらなくても、ほかの練習はふつうに動く
+- くわしくは README の「Apache Modules」「Vendor Files」「reCAPTCHA」の節
+
+---
+
 ## 次の手順（予定）
 
 - 自分の家計簿アプリを、わざと穴だらけで作り始める
