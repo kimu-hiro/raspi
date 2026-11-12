@@ -219,6 +219,13 @@ sudo mv ~/DVWA /var/www/html/dvwa
 
 → これで `http://homepi/dvwa/` が DVWA になります
 
+- この時点でブラウザで開くと、次の文が出る。**これは正常**
+  （設定ファイルをまだ作っていないため。4-1 で作る）
+
+  ```
+  DVWA System error - config file not found.
+  ```
+
 - 練習で DVWA を壊したら、1-3 の `git clone` からやり直す
   （home に原本を残す `cp -r` ではなく `mv` にした。
   取り直すのも練習になるため。2026-11-11 に決めた）
