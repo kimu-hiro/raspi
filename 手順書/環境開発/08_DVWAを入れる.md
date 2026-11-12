@@ -198,7 +198,12 @@ Apache は `/var/www/html` の中を見せます。
 ls /var/www/html
 ```
 
-→ `index.html`（Apache の It works! ページ）だけならそのまま進む
+→ 次の2つだけならそのまま進む
+
+| ファイル | 正体 |
+|---|---|
+| `index.html` | Apache の It works! ページ |
+| `info.php` | 手順書 06 でわざと置いた穴（`phpinfo()` のページ） |
 
 ### 2-2. DVWA を置く
 
